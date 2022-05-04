@@ -39,6 +39,10 @@ type TemperatureEvent =
       value: string; // signals that the Fahrenheit value should change
     };
 
+/**
+ * state
+ * active
+ */
 const TemperatureMachine = createMachine<TemperatureContext, TemperatureEvent>({
   initial: "active",
   context: { C: "", F: "" },

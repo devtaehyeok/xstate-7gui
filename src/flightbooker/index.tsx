@@ -97,6 +97,7 @@ const FlightBooker = () => {
       <form style={{ display: "flex", flexDirection: "column" }}>
         <select
           onChange={(e) => {
+            send({ type: "returnDate.UPDATE", value: "" });
             send({
               type: "SET_TRIP",
               value: e.target.value as "oneWay" | "roundTrip"
@@ -109,14 +110,21 @@ const FlightBooker = () => {
         </select>
         <FlightInput
           value={startDate}
-          onChange={(value) => send({ type: "startDate.UPDATE", value })}
+          onChange={(value: string) =>
+            send({ type: "startDate.UPDATE", value })
+          }
           error={!startDate}
           label="Start date"
         />
         <FlightInput
           value={returnDate}
-          onChange={(value) => send({ type: "returnDate.UPDATE", value })}
-          error={!returnDate || returnDate <= startDate}
+          onChange={(value: string) =>
+            send({ type: "returnDate.UPDATE", value })
+          }
+          error={
+            trip === "roundTrip" &&
+            (!startDate || !returnDate || returnDate <= startDate)
+          }
           disabled={trip === "oneWay"}
           label="Return date"
         />

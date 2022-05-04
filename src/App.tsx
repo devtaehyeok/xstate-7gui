@@ -20,7 +20,6 @@ const Back = styled(Button)`
   padding: 5px 20px;
   width: 200px;
   text-align: center;
-
   margin: 20px;
 `;
 export default function App() {

@@ -3,8 +3,6 @@ import styled from "styled-components";
 import useTemperatureMachine from "./machine";
 const Wrapper = styled.div`
   width: 800px;
-  height: 800px;
-  border: 1px solid gray;
   display: flex;
   justify-content: center;
   align-items: center;

@@ -1,25 +1,56 @@
-import { createMachine } from "xstate";
+import { createMachine, assign, send } from "xstate";
 
-const crudMachine = createMachine({
+type User = {
+  name: string;
+  surname: string;
+};
+
+interface CrudContext {
+  name: string;
+  surname: string;
+  filter: string;
+  selectedUser: number;
+  users: User[];
+}
+
+type CrudEvent =
+  | {
+      type: "CREATE";
+    }
+  | {
+      type: "UPDATE";
+    }
+  | { type: "DELETE" }
+  | { type: "SELECT"; index: number }
+  | { type: "CANCEL" }
+  | { type: "FILTER"; value: string }
+  | { type: "name.change"; value: string }
+  | { type: "surname.change"; value: string };
+
+const crudMachine = createMachine<CrudContext, CrudEvent>({
   context: {
     users: [
       {
-        name: "Billy",
-        surname: "Jean"
+        name: "LG",
+        surname: "CNS"
       },
       {
-        name: "David",
-        surname: "Khourshid"
+        name: "Samsung",
+        surname: "SDS"
       },
       {
-        name: "Stephen",
-        surname: "Shaw"
+        name: "SK",
+        surname: "CNC"
+      },
+      {
+        name: "Kakao",
+        surname: "Enterprise"
       }
     ],
     name: "",
     surname: "",
-    selectedUser: null,
-    filter: ""
+    filter: "",
+    selectedUser: -1
   },
   initial: "newUser",
   states: {
@@ -28,13 +59,12 @@ const crudMachine = createMachine({
         assign({
           name: "",
           surname: "",
-          selectedUser: null
-        }),
-        updateFields
+          filter: "",
+          selectedUser: -1
+        })
       ],
       on: {
         CREATE: {
-          cond: (ctx) => !!ctx.name && !!ctx.surname,
           actions: [
             assign({
               users: (ctx) => {
@@ -46,13 +76,13 @@ const crudMachine = createMachine({
               name: "",
               surname: ""
             }),
-            updateUsers,
-            updateFields
-          ]
+            () => {
+              if ("activeElement" in document)
+                (document?.activeElement as HTMLElement)?.blur();
+            }
+          ],
+          cond: (ctx) => !!ctx.name && !!ctx.surname
         }
-      },
-      SUBMIT: {
-        actions: send("CREATE")
       }
     },
     editUser: {
@@ -63,16 +93,14 @@ const crudMachine = createMachine({
           actions: [
             assign({
               users: (ctx) => {
-                ctx.users[ctx.selectedUser] = {
+                ctx.users[ctx?.selectedUser] = {
                   name: ctx.name,
                   surname: ctx.surname
                 };
                 return ctx.users;
                 //return ctx.users.filter((_, i) => i !== ctx.selectedUser);
               }
-            }),
-            updateUsers,
-            updateFields
+            })
           ]
         },
         DELETE: {
@@ -83,19 +111,13 @@ const crudMachine = createMachine({
               users: (ctx) => {
                 return ctx.users.filter((_, i) => i !== ctx.selectedUser);
               }
-            }),
-            updateUsers,
-            updateFields
+            })
           ]
         },
-        CANCEL: "newUser",
-        SUBMIT: {
-          actions: send("UPDATE")
-        }
+        CANCEL: "newUser"
       }
     }
   },
-  entry: updateUsers,
   on: {
     "name.change": {
       actions: assign({
@@ -114,8 +136,7 @@ const crudMachine = createMachine({
           selectedUser: (_, e) => e.index,
           name: (ctx, e) => ctx.users[e.index].name,
           surname: (ctx, e) => ctx.users[e.index].surname
-        }),
-        updateFields
+        })
       ]
     },
     FILTER: {
@@ -125,10 +146,10 @@ const crudMachine = createMachine({
           selectedUser: null,
           name: "",
           surname: ""
-        }),
-        updateUsers,
-        updateFields
+        })
       ]
     }
   }
 });
+
+export default crudMachine;

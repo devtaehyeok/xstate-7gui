@@ -13,23 +13,32 @@ const Wrapper = styled.div`
   gap: 20px;
 `;
 
+const Header = styled.h1`
+  text-align: center;
+`;
+
 export default function Main() {
   return (
     <Wrapper>
-      <Button>
-        <Link to="/counter">Counter</Link>
+      <Header>
+        <a href="https://eugenkiss.github.io/7guis/tasks" target="_blank">
+          7-GUI examples with React & XState
+        </a>
+      </Header>
+      <Button type="primary">
+        <Link to="/counter">1. Counter</Link>
       </Button>
-      <Button>
-        <Link to="/temperature">temperature</Link>
+      <Button type="primary">
+        <Link to="/temperature">2. Temperature</Link>
       </Button>
-      <Button>
-        <Link to="/flightbooker">flightbooker</Link>
+      <Button type="primary">
+        <Link to="/flightbooker">3. Flightbooker</Link>
       </Button>
-      <Button>
-        <Link to="/timer">Timer</Link>
+      <Button type="primary">
+        <Link to="/timer">4. Timer</Link>
       </Button>
-      <Button>
-        <Link to="/crud">Crud</Link>
+      <Button type="primary">
+        <Link to="/crud">5. Crud</Link>
       </Button>
     </Wrapper>
   );

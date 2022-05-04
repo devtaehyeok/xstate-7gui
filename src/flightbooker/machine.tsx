@@ -38,6 +38,7 @@ type FlightEvent =
  ** "editing" - the state where the flight booking information is being edited
  ** "submitted" - the state where the flight booking information has been submitted successfully, and no further changes can be made
  */
+// 게임중 : 값 스타크래프트 / 게임중 { 스타크래프트} / 스타크래프트
 const machine = createMachine<FlightContext, FlightEvent>({
   id: "flight",
   initial: "editing",
