@@ -22,7 +22,7 @@ export default function Main() {
     <Wrapper>
       <Header>
         <a href="https://eugenkiss.github.io/7guis/tasks" target="_blank">
-          7-GUI examples with React & XState
+          7-GUIs examples with React & XState
         </a>
       </Header>
       <Button type="primary">
@@ -39,6 +39,9 @@ export default function Main() {
       </Button>
       <Button type="primary">
         <Link to="/crud">5. Crud</Link>
+      </Button>
+      <Button type="primary">
+        <Link to="/circledrawer">6. Circle Drawer</Link>
       </Button>
     </Wrapper>
   );

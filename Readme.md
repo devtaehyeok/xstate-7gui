@@ -1,6 +1,6 @@
-# 7GUI with XState
+# 7GUIs with XState
 
-[7GUI Task](https://eugenkiss.github.io/7guis/)implementation with React and XState
+[7GUIs Task](https://eugenkiss.github.io/7guis/)implementation with React and XState
 
 ## Reference
 

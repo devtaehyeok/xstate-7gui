@@ -98,7 +98,6 @@ const crudMachine = createMachine<CrudContext, CrudEvent>({
                   surname: ctx.surname
                 };
                 return ctx.users;
-                //return ctx.users.filter((_, i) => i !== ctx.selectedUser);
               }
             })
           ]

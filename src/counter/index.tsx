@@ -33,6 +33,9 @@ export default function Counter() {
       <Button type="primary" onClick={() => send("INCREMENT")}>
         increment
       </Button>
+      <Button type="danger" onClick={() => send("DECREMENT")}>
+        decrement
+      </Button>
     </Wrapper>
   );
 }

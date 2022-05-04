@@ -7,10 +7,12 @@ import Temperature from "./temperature";
 import FlightBooker from "./flightbooker";
 import Crud from "./crud";
 import Timer from "./timer";
+import CircleDrawer from "./circledrawer";
 import { Button } from "antd";
 
 const Layout = styled.section`
   height: 100vh;
+  /* background-color: #f4d4d1; */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -34,6 +36,7 @@ export default function App() {
         <Route path="/flightbooker" element={<FlightBooker />} />
         <Route path="/timer" element={<Timer />} />
         <Route path="/crud" element={<Crud />} />
+        <Route path="/circledrawer" element={<CircleDrawer />} />
         <Route path="*" element={<Main />} />
       </Routes>
       <Outlet />
