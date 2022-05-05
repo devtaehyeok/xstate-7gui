@@ -1,4 +1,4 @@
-import { createMachine, assign, send, ContextFrom, EventFrom } from "xstate";
+import { assign, send, ContextFrom } from "xstate";
 import { choose, log } from "xstate/lib/actions";
 import { createModel } from "xstate/lib/model";
 
@@ -29,7 +29,6 @@ const CircleDrawerModel = createModel(
   }
 );
 type CContext = ContextFrom<typeof CircleDrawerModel>;
-type CEvent = EventFrom<typeof CircleDrawerModel>;
 
 const undo = CircleDrawerModel.assign((ctx) => {
   const lastCircles = ctx.snapshots.pop() || [];
@@ -126,13 +125,7 @@ const createDrawerMachine = (width: number, height: number) =>
               actions: "redo"
             },
             "CANVAS.CLICK": {
-              actions: choose([
-                {
-                  cond: "hasLastClosestCircle",
-                  actions: ["selectCircle", "logging"]
-                },
-                { actions: ["createCircle", "logging"] }
-              ])
+              actions: "chooseEditOrAdd"
             }
           }
         },
@@ -160,6 +153,13 @@ const createDrawerMachine = (width: number, height: number) =>
         selectCircle: selectCircle,
         createCircle: createCircle,
         circieChanged: circieChanged,
+        chooseEditOrAdd: choose([
+          {
+            cond: "hasLastClosestCircle",
+            actions: ["selectCircle", "logging"]
+          },
+          { actions: ["createCircle", "logging"] }
+        ]),
         exit: exit,
         logging: log()
       },
