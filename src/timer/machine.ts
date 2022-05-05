@@ -1,6 +1,15 @@
 import { useMachine } from "@xstate/react";
-import { createMachine, assign } from "xstate";
-
+import {
+  createMachine,
+  assign,
+  spawn,
+  Sender,
+  Receiver,
+  send,
+  ActorRef,
+  sendParent
+} from "xstate";
+import { Actor } from "xstate/lib/Actor";
 /**
  * Modeling
  *
@@ -13,11 +22,6 @@ import { createMachine, assign } from "xstate";
  ** A RESET event resets elapsed to 0.
  */
 
-/**
- * Context (descriptive data)
- ** C - the temperature in degrees Celsius
- ** F - the temperature in degrees Fahrenheit
- */
 interface TimerContext {
   // The elapsed time (in seconds)
   elapsed: number;
@@ -40,71 +44,119 @@ type TimerEvent =
   | {
       // User intent to reset the elapsed time to 0
       type: "RESET";
+    }
+  | {
+      type: "DURATION.CHANGED";
+      value: number;
     };
+
+// const counterInterval = (
+//   callback: Sender<TimerEvent>,
+//   receive: Receiver<TimerEvent>
+// ) => {
+//   let count = 0;
+
+//   const intervalId = setInterval(() => {
+//     callback({ type: "COUNT.UPDATE", count });
+//     count++;
+//   }, 1000);
+
+//   receive((event) => {
+//     if (event.type === "INC") {
+//       count++;
+//     }
+//   });
+
+//   return () => {
+//     clearInterval(intervalId);
+//   };
+// };
 
 /**
  ** "running" - the state where the timer is running, receiving TICK events from some invoked interval service, and updating context.elapsed.
  ** "paused" - the state where the timer is not running and no longer receiving TICK events.
  */
-const TimerMachine = createMachine<TimerContext, TimerEvent>({
-  initial: "running",
-  context: {
-    elapsed: 0,
-    duration: 5,
-    interval: 0.1
-  },
-  states: {
-    running: {
-      invoke: {
-        src: (context) => (cb) => {
-          const interval = setInterval(() => {
-            cb("TICK");
-          }, 1000 * context.interval);
+// const tickMachine:()=>(context, event) =>
+//   spawn((callback, receive) => {
+//     // send to parent
 
-          return () => {
-            clearInterval(interval);
-          };
-        }
-      },
-      on: {
-        // react to all event
-        "": {
-          target: "paused",
-          cond: (context) => {
-            return context.elapsed >= context.duration;
+//     const interval = setInterval(() => {
+//       callback("TICK");
+//     }, 1000 * context.interval);
+
+//     // receive from parent
+//     receive((event) => {
+//       // handle event
+//     });
+
+//     // disposal
+//     return () => {
+//       clearInterval(interval);
+//     }});
+
+const TimerMachine = createMachine<TimerContext, TimerEvent>(
+  {
+    initial: "running",
+    schema: {
+      context: {} as TimerContext
+    },
+    context: {
+      elapsed: 0,
+      duration: 5,
+      interval: 0.1
+    },
+    states: {
+      running: {
+        invoke: {
+          src: (context) => (cb) => {
+            const interval = setInterval(() => {
+              cb("TICK");
+            }, 1000 * context.interval);
+
+            return () => {
+              clearInterval(interval);
+            };
           }
         },
-        TICK: {
-          actions: assign({
-            elapsed: (context) =>
-              +(context.elapsed + context.interval).toFixed(2)
-          })
+        always: [{ cond: "shouldPause", target: "paused" }],
+        on: {
+          TICK: { actions: ["tick"] }
         }
+      },
+      paused: {
+        always: [{ cond: "shouldBePaused", target: "running" }]
       }
     },
-    paused: {
-      on: {
-        // react to all event
-        "": {
-          target: "running",
-          cond: (context) => context.elapsed < context.duration
-        }
-      }
+    on: {
+      "DURATION.UPDATE": {
+        actions: ["updateDuration"]
+      },
+      RESET: { actions: ["reset"] }
     }
   },
-  on: {
-    "DURATION.UPDATE": {
-      actions: assign({
-        duration: (_, event) => event.value
-      })
+  {
+    guards: {
+      shouldPause: (context: TimerContext) => {
+        return context.elapsed >= context.duration;
+      },
+      shouldBePaused: (context: TimerContext) => {
+        return context.elapsed < context.duration;
+      }
     },
-    RESET: {
-      actions: assign({
+    actions: {
+      tick: assign<TimerContext, TimerEvent>({
+        elapsed: (context) => +(context.elapsed + context.interval).toFixed(2)
+      }),
+      reset: assign<TimerContext, TimerEvent>({
         elapsed: 0
+      }),
+      updateDuration: assign<TimerContext, TimerEvent>({
+        duration: (ctx, event) =>
+          event.type === "DURATION.UPDATE" ? event.value : ctx.duration
       })
     }
   }
-});
+);
 const useTemperatureMachine = () => useMachine(TimerMachine);
 
 export default useTemperatureMachine;

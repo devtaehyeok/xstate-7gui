@@ -1,73 +1,53 @@
 import { useMachine } from "@xstate/react";
-import { createMachine, assign } from "xstate";
+import { createMachine, assign, actions } from "xstate";
+import { createModel } from "xstate/lib/model";
 
-/**
- * Modeling
- *
- * Instead of thinking about this as bidirectional data flow,
- * it can be simpler to think of this as a UI rendered from two values: C and F,
- * and these two values can be updated due to events,
- * such as CELSIUS for changing the C˚ input value
- * and FAHRENHEIT for changing the F˚ input value.
- * It just so happens that the <input> element both displays and updates the values,
- * but that's just an implementation detail.
- * (we can focus on `event`)
- */
-
-/**
- * Context (descriptive data)
- ** C - the temperature in degrees Celsius
- ** F - the temperature in degrees Fahrenheit
- */
-interface TemperatureContext {
-  C: string;
-  F: string;
-}
-/**
- * Note that when one of these events is sent to the machine,
- * two things happen simultaneously:
- **  The desired temperature value is assigned to the event value
- **  The other temperature value is calculated and assigned based on that same event value
- */
-type TemperatureEvent =
-  | {
-      type: "CELSIUS";
-      value: string; //  signals that the Celsius value should change
+const TemperatureModel = createModel(
+  {
+    C: 0,
+    F: 0
+  },
+  {
+    events: {
+      CELSIUS: (value: number) => ({ value: String(value) }),
+      FAHRENHEIT: (value: number) => ({ value: String(value) })
     }
-  | {
-      type: "FAHRENHEIT";
-      value: string; // signals that the Fahrenheit value should change
-    };
+  }
+);
+const assignC = TemperatureModel.assign({
+  C: (_, event) => +event.value,
+  F: (_, event) => (event.value.length ? +event.value * (9 / 5) + 32 : 0)
+});
 
-/**
- * state
- * active
- */
-const TemperatureMachine = createMachine<TemperatureContext, TemperatureEvent>({
-  initial: "active",
-  context: { C: "", F: "" },
-  states: {
-    active: {
-      on: {
-        CELSIUS: {
-          actions: assign({
-            C: (_, event) => event.value,
-            F: (_, event) =>
-              event.value.length ? String(+event.value * (9 / 5) + 32) : ""
-          })
-        },
-        FAHRENHEIT: {
-          actions: assign({
-            C: (_, event) =>
-              event.value.length ? String((+event.value - 32) * (5 / 9)) : "",
-            F: (_, event) => event.value
-          })
+const assignF = TemperatureModel.assign({
+  C: (_, event) => (event.value.length ? (+event.value - 32) * (5 / 9) : 0),
+  F: (_, event) => +event.value
+});
+
+const TemperatureMachine2 = TemperatureModel.createMachine(
+  {
+    context: TemperatureModel.initialContext,
+    initial: "active",
+    states: {
+      active: {
+        on: {
+          CELSIUS: {
+            actions: "assignC"
+          },
+          FAHRENHEIT: {
+            actions: "assignF"
+          }
         }
       }
     }
+  },
+  {
+    actions: {
+      assignC: assignC,
+      assignF: assignF
+    }
   }
-});
-
-const useTemperatureMachine = () => useMachine(TemperatureMachine);
+);
+const useTemperatureMachine = () => useMachine(TemperatureMachine2);
 
 export default useTemperatureMachine;

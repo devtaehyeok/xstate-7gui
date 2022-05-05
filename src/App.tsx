@@ -1,4 +1,11 @@
-import { Routes, Route, Navigate, Outlet, Link } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  Link,
+  useLocation
+} from "react-router-dom";
 import "antd/dist/antd.css";
 import styled from "styled-components";
 import Main from "./main";
@@ -25,11 +32,14 @@ const Back = styled(Button)`
   margin: 20px;
 `;
 export default function App() {
+  const location = useLocation();
   return (
     <Layout>
-      <Back>
-        <Link to="/">Main</Link>
-      </Back>
+      {location.pathname !== "/" && (
+        <Back>
+          <Link to="/">Main</Link>
+        </Back>
+      )}
       <Routes>
         <Route path="/counter" element={<Counter />} />
         <Route path="/temperature" element={<Temperature />} />

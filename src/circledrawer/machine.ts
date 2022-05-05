@@ -1,35 +1,6 @@
-import { createMachine, assign, send } from "xstate";
-
-const elApp = document.querySelector("#app");
-const elCanvas = document.querySelector("#canvas");
-const canvasContext = elCanvas.getContext("2d");
-
-const elUndo = document.querySelector("#undo");
-const elRedo = document.querySelector("#redo");
-const elRadius = document.querySelector("#radius");
-
-const snapshot = assign({
-  snapshots: (ctx) => {
-    return [...ctx.snapshots, ctx.circles];
-  }
-});
-
-function findLastIndex(array, predicate) {
-  let index = -1;
-  for (let i = 0; i < array.length; i++) {
-    if (predicate(array[i], i)) {
-      index = i;
-    }
-  }
-
-  return index;
-}
-
-function getCircleIndex(circles, x, y) {
-  return findLastIndex(circles, (circle) => {
-    return Math.hypot(circle.x - x, circle.y - y) < circle.radius;
-  });
-}
+import { createMachine, assign, send, ContextFrom, EventFrom } from "xstate";
+import { choose, log } from "xstate/lib/actions";
+import { createModel } from "xstate/lib/model";
 
 export interface Circle {
   x: number;
@@ -37,114 +8,176 @@ export interface Circle {
   radius: number;
 }
 
-const initialCircles: Circle[] = [];
-
-interface Context {
-  width: number;
-  height: number;
-}
-
-const drawingMachine = createMachine({
-  context: {
-    width: elCanvas.width,
-    height: elCanvas.height,
-    circles: initialCircles,
-    circle: null,
-    snapshots: [initialCircles],
-    redo: []
+const CircleDrawerModel = createModel(
+  {
+    width: 0,
+    height: 0,
+    circles: [] as Circle[],
+    circle: null as Circle | null,
+    snapshots: [] as Circle[][],
+    redo: [] as Circle[][]
   },
-  initial: "drawing",
-  states: {
-    drawing: {
-      on: {
-        "CIRCLE.CREATE": {
-          actions: [
-            assign({
-              circle: null,
-              circles: (ctx, e) => ctx.circles.concat(e.circle)
-            }),
-            snapshot
-          ]
-        },
-        "CIRCLE.SELECT": {
-          actions: assign({
-            circle: (ctx, e) => e.circle
-          }),
-          target: "editing"
-        },
-        UNDO: {
-          cond: (ctx) => ctx.snapshots.length > 0,
-          actions: assign((ctx) => {
-            const lastCircles = ctx.snapshots.pop();
+  {
+    events: {
+      "CIRCLE.CREATE": (circle: Circle) => ({ circle }),
+      "CIRCLE.SELECT": (circle: Circle) => ({ circle }),
+      "CIRCLE.CHANGE": (radius: number) => ({ radius }),
+      "CANVAS.CLICK": (circle: Circle) => ({ circle }),
+      UNDO: () => ({}),
+      REDO: () => ({})
+    }
+  }
+);
+type CContext = ContextFrom<typeof CircleDrawerModel>;
+type CEvent = EventFrom<typeof CircleDrawerModel>;
 
-            return {
-              circles: ctx.snapshots[ctx.snapshots.length - 1] || [],
-              snapshots: [...ctx.snapshots],
-              redo: [...ctx.redo, lastCircles]
-            };
-          })
-        },
-        REDO: {
-          cond: (ctx) => ctx.redo.length > 0,
-          actions: assign((ctx) => {
-            const redoCircles = ctx.redo.pop();
+const undo = CircleDrawerModel.assign((ctx) => {
+  const lastCircles = ctx.snapshots.pop() || [];
+  return {
+    circles: ctx.snapshots[ctx.snapshots.length - 1] ?? [],
+    snapshots: [...ctx.snapshots],
+    redo: [...ctx.redo, lastCircles]
+  };
+});
 
-            return {
-              circles: redoCircles,
-              snapshots: [...ctx.snapshots, redoCircles],
-              redo: [...ctx.redo]
-            };
-          })
+const redo = CircleDrawerModel.assign((ctx) => {
+  const redoCircles = ctx.redo.pop() || [];
+  return {
+    circles: redoCircles,
+    snapshots: [...ctx.snapshots, redoCircles],
+    redo: [...ctx.redo]
+  };
+});
+
+const circleAdded = CircleDrawerModel.assign((ctx, e) => {
+  if (e.type === "CIRCLE.CREATE") {
+    return { circles: [...ctx.circles, e.circle] };
+  }
+  return { circles: ctx.circles };
+});
+
+const snapshot = CircleDrawerModel.assign({
+  snapshots: (ctx) => {
+    return [...ctx.snapshots, ctx.circles];
+  }
+});
+
+const circleSelected = CircleDrawerModel.assign({
+  circle: (ctx, e) => (e.type === "CIRCLE.SELECT" ? e.circle : ctx.circle)
+});
+
+const circieChanged = CircleDrawerModel.assign((ctx, e) =>
+  e.type === "CIRCLE.CHANGE"
+    ? {
+        circles: ctx.circles.map((c) =>
+          c.x === ctx?.circle?.x && c.y === ctx?.circle?.y
+            ? { ...c, radius: e.radius }
+            : c
+        ),
+        circle: ctx.circle
+          ? { ...ctx.circle, radius: e.radius }
+          : { x: 0, y: 0, radius: 40 }
+      }
+    : { circles: ctx.circles }
+);
+
+const selectCircle = send(
+  (ctx: CContext, e: { type: "CRICLE.SELECT"; circle: Circle }) =>
+    CircleDrawerModel.events["CIRCLE.SELECT"](
+      ctx.circles.filter(
+        (c: Circle) =>
+          (c.x - e.circle.x) * (c.x - e.circle.x) +
+            (c.y - e.circle.y) * (c.y - e.circle.y) <
+          c.radius * c.radius
+      )?.[0]
+    )
+);
+
+const createCircle = send(
+  (c: CContext, e: { type: "CRICLE.CREATE"; circle: Circle }) =>
+    CircleDrawerModel.events["CIRCLE.CREATE"](e.circle)
+);
+
+const exit = assign<CContext>({
+  circle: null
+});
+
+const createDrawerMachine = (width: number, height: number) =>
+  CircleDrawerModel.createMachine(
+    {
+      context: { ...CircleDrawerModel.initialContext, width, height },
+      initial: "drawing",
+      states: {
+        drawing: {
+          on: {
+            "CIRCLE.CREATE": {
+              actions: ["circleAdded", "snapshot", "logging"]
+            },
+            "CIRCLE.SELECT": {
+              actions: ["circleSelected", "logging"],
+              target: "editing"
+            },
+            UNDO: {
+              cond: "isSnapshot",
+              actions: ["undo", "logging"]
+            },
+            REDO: {
+              cond: "canRedo",
+              actions: "redo"
+            },
+            "CANVAS.CLICK": {
+              actions: choose([
+                {
+                  cond: "hasLastClosestCircle",
+                  actions: ["selectCircle", "logging"]
+                },
+                { actions: ["createCircle", "logging"] }
+              ])
+            }
+          }
+        },
+        editing: {
+          exit: "exit",
+          on: {
+            "CANVAS.CLICK": {
+              target: "drawing",
+              actions: ["snapshot", "logging"]
+            },
+            "CIRCLE.CHANGE": {
+              actions: "circieChanged"
+            }
+          }
         }
       }
     },
-    editing: {
-      exit: assign({
-        circle: null
-      }),
-      on: {
-        "CIRCLE.CHANGE": {
-          actions: assign({
-            circles: (ctx, e) => {
-              return ctx.circles.map((circle, i) => {
-                if (i !== ctx.circle) {
-                  return circle;
-                }
-
-                return {
-                  ...circle,
-                  radius: e.radius
-                };
-              });
-            }
-          })
-        },
-        "CANVAS.CLICK": {
-          target: "drawing",
-          actions: snapshot
-        }
+    {
+      actions: {
+        circleAdded: circleAdded,
+        circleSelected: circleSelected,
+        undo: undo,
+        redo: redo,
+        snapshot: snapshot,
+        selectCircle: selectCircle,
+        createCircle: createCircle,
+        circieChanged: circieChanged,
+        exit: exit,
+        logging: log()
+      },
+      guards: {
+        isSnapshot: (ctx) => ctx.snapshots.length > 0,
+        hasLastClosestCircle: (ctx, e) =>
+          e.type === "CANVAS.CLICK" &&
+          ctx.circles.filter(
+            (c) =>
+              (c.x - e.circle.x) * (c.x - e.circle.x) +
+                (c.y - e.circle.y) * (c.y - e.circle.y) <
+              c.radius * c.radius
+          ).length
+            ? true
+            : false,
+        canRedo: (ctx) => ctx.redo.length > 0
       }
     }
-  },
-  on: {
-    "CANVAS.CLICK": [
-      {
-        cond: (ctx, e) => {
-          return getCircleIndex(ctx.circles, e.circle.x, e.circle.y) !== -1;
-        },
-        actions: [
-          send((ctx, e) => ({
-            type: "CIRCLE.SELECT",
-            circle: getCircleIndex(ctx.circles, e.circle.x, e.circle.y)
-          }))
-        ]
-      },
-      {
-        actions: send((ctx, e) => ({
-          type: "CIRCLE.CREATE",
-          circle: e.circle
-        }))
-      }
-    ]
-  }
-});
+  );
+
+export default createDrawerMachine;

@@ -8,7 +8,8 @@ const Wrapper = styled.section`
   display: flex;
   flex-direction: column;
   align-items: stretch;
-
+  padding: 40px;
+  border: 1px solid lightgray;
   button {
     padding: 0 1rem;
     height: 2rem;
