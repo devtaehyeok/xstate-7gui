@@ -5,7 +5,7 @@ import Input from "antd/lib/input/Input";
 import { useLayoutEffect } from "react";
 import styled from "styled-components";
 import createMachine from "./machine";
-import { inspect } from "@xstate/inspect";
+
 const Wrapper = styled.div`
   width: 1000px;
   height: 660px;
@@ -51,15 +51,10 @@ const onClickCanvas = (dim: typeof canvasDimension) => (
   });
 };
 
-inspect({
-  url: "https://statecharts.io/inspect",
-  iframe: false
-});
-
 const machine = createMachine(canvasDimension.width, canvasDimension.height);
 
 export default function CircleDrawer() {
-  const [state, send] = useMachine(machine, { devTools: true });
+  const [state, send] = useMachine(machine);
   const clickCanvas = useCallback(onClickCanvas(canvasDimension), [
     canvasDimension
   ]);

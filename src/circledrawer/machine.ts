@@ -1,4 +1,4 @@
-import { assign, send, ContextFrom } from "xstate";
+import { assign, send, ContextFrom, EventFrom } from "xstate";
 import { choose, log } from "xstate/lib/actions";
 import { createModel } from "xstate/lib/model";
 
@@ -29,7 +29,7 @@ const CircleDrawerModel = createModel(
   }
 );
 type CContext = ContextFrom<typeof CircleDrawerModel>;
-
+type CEvent = EventFrom<typeof CircleDrawerModel>;
 const undo = CircleDrawerModel.assign((ctx) => {
   const lastCircles = ctx.snapshots.pop() || [];
   return {
@@ -93,7 +93,7 @@ const selectCircle = send(
 );
 
 const createCircle = send(
-  (c: CContext, e: { type: "CRICLE.CREATE"; circle: Circle }) =>
+  (c: CContext, e: Extract<CEvent, { type: "CIRCLE.CREATE" }>) =>
     CircleDrawerModel.events["CIRCLE.CREATE"](e.circle)
 );
 
