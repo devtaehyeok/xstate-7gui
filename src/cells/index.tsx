@@ -3,32 +3,8 @@ import styled from "styled-components";
 import { interpret, InterpreterFrom } from "xstate";
 import { useInterpret, useSelector } from "@xstate/react";
 
-import CellsMachine, { cellsAtom, expSelector } from "./machine";
-import { useRecoilState, RecoilRoot } from "recoil";
-
-type GlobalStateContextType = {
-  cellService: InterpreterFrom<typeof CellsMachine>;
-};
-// https://dev.to/mpocock1/how-to-manage-global-state-with-xstate-and-react-3if5
-export const GlobalStateContext = createContext<GlobalStateContextType>(
-  {} as GlobalStateContextType
-);
-
-export const GlobalStateProvider = ({
-  children
-}: {
-  children: JSX.Element;
-}) => {
-  const cellService = useInterpret(CellsMachine);
-  cellService.start();
-  cellService.onTransition((state) => console.log(state));
-
-  return (
-    <GlobalStateContext.Provider value={{ cellService }}>
-      {children}
-    </GlobalStateContext.Provider>
-  );
-};
+import { cellsAtom, expSelector } from "./atom";
+import { useRecoilState, RecoilRoot, useRecoilValue } from "recoil";
 
 const Table = styled.table`
   border-collapse: collapse;
@@ -47,6 +23,8 @@ const Th = styled.th`
   }
 `;
 const Wrapper = styled.section`
+  position: relative;
+  left: 0px;
   display: flex;
   align-items: flex-start;
   flex-direction: column;
@@ -75,55 +53,56 @@ const ROWS = Array.from(Array(10).keys()).map(String);
 
 const Cells = () => {
   return (
-    <GlobalStateProvider>
-      <RecoilRoot>
-        <Wrapper>
-          <H1>
-            I was trying to solve this problem with XState,
-            <br />
-            but since the case involves nested references,
-            <br />I think using a solution with built-in reactive is a better
-            choice.
-          </H1>
-          <Table>
-            <thead>
-              <tr>
-                <Th></Th>
+    <RecoilRoot>
+      <Wrapper>
+        <H1>
+          I was trying to solve this problem with XState,
+          <br />
+          but since the case involves nested references,
+          <br />I think using a solution with built-in reactive is a better
+          choice.
+        </H1>
+        <Table>
+          <thead>
+            <tr>
+              <Th></Th>
+              {COLUMNS.map((c) => (
+                <Th key={c}>{c}</Th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map((r) => (
+              <tr key={r}>
+                <Th>{r}</Th>
                 {COLUMNS.map((c) => (
-                  <Th key={c}>{c}</Th>
+                  <Cell key={`${c}${r}`} id={`${c}${r}`} />
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {ROWS.map((r) => (
-                <tr key={r}>
-                  <Th>{r}</Th>
-                  {COLUMNS.map((c) => (
-                    <Cell key={`${c}${r}`} id={`${c}${r}`} />
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </Wrapper>
-      </RecoilRoot>
-    </GlobalStateProvider>
+            ))}
+          </tbody>
+        </Table>
+      </Wrapper>
+    </RecoilRoot>
   );
 };
 
 const Cell = ({ id }: { id: string }) => {
   const [isSelected, setSelected] = useState(false);
-  const [cellValue, setCellValue] = useRecoilState(cellsAtom(id));
-  const [exp] = useRecoilState(expSelector(cellValue, id));
+  const [cell, setCellValue] = useRecoilState(cellsAtom(id));
+  const exp = useRecoilValue(expSelector(id));
   return (
     <Td onClick={() => setSelected(true)}>
       {isSelected ? (
         <Input
-          defaultValue={cellValue}
+          defaultValue={cell.val}
           autoFocus
           onBlur={(e) => {
             setSelected(false);
-            setCellValue(e.target.value);
+            setCellValue({
+              type: e.target.value.startsWith("=") ? "exp" : "val",
+              val: e.target.value
+            });
           }}
         />
       ) : (
