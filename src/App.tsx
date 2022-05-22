@@ -6,6 +6,7 @@ import {
   Link,
   useLocation
 } from "react-router-dom";
+import { interpret } from "xstate";
 import "antd/dist/antd.css";
 import styled from "styled-components";
 import Main from "./main";
@@ -16,9 +17,10 @@ import Crud from "./crud";
 import Timer from "./timer";
 import CircleDrawer from "./circledrawer";
 import { Button } from "antd";
+import Cells from "./cells";
 
 const Layout = styled.section`
-  height: 100vh;
+  height: 100%;
   /* background-color: #f4d4d1; */
   display: flex;
   align-items: center;
@@ -47,6 +49,7 @@ export default function App() {
         <Route path="/timer" element={<Timer />} />
         <Route path="/crud" element={<Crud />} />
         <Route path="/circledrawer" element={<CircleDrawer />} />
+        <Route path="/cells" element={<Cells />} />
         <Route path="*" element={<Main />} />
       </Routes>
       <Outlet />

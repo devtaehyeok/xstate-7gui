@@ -43,6 +43,9 @@ export default function Main() {
       <Button type="primary">
         <Link to="/circledrawer">6. Circle Drawer</Link>
       </Button>
+      <Button type="primary">
+        <Link to="/cells">7. Cells</Link>
+      </Button>
     </Wrapper>
   );
 }

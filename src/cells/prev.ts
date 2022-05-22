@@ -1,12 +1,43 @@
+import { string } from "fp-ts";
+
 import { assign, send, ContextFrom, EventFrom } from "xstate";
 import { choose, log } from "xstate/lib/actions";
 import { createModel } from "xstate/lib/model";
+import { atomFamily, selectorFamily } from "recoil";
 
 export interface Circle {
   x: number;
   y: number;
   radius: number;
 }
+
+const cellsAtom = atomFamily<{val:string,exp:string}, string>({
+  key: "valueAtom",
+  default: {val:'',exp:''}
+});
+const expSelector = selectorFamily<string, string>({
+  key: "expSelector",
+  get : (id)=>
+});
+
+
+
+const CellsModel = createModel(
+  {
+    editing: false,
+    target: "",
+    cellMap: new Map()
+  },
+  {
+    events: {
+      "CELLS.SELECT": (id: string) => ({ id }),
+      "CELLS.UNSELECT": () => ({}),
+      "CELLS.EDIT": (value: string) => ({ value })
+    }
+  }
+);
+type CellsContext = ContextFrom<typeof CellsModel>;
+type CellsEvent = EventFrom<typeof CellsModel>;
 
 const CircleDrawerModel = createModel(
   {
@@ -28,6 +59,7 @@ const CircleDrawerModel = createModel(
     }
   }
 );
+
 type CContext = ContextFrom<typeof CircleDrawerModel>;
 type CEvent = EventFrom<typeof CircleDrawerModel>;
 const undo = CircleDrawerModel.assign((ctx) => {
